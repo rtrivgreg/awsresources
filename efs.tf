@@ -1,3 +1,6 @@
+# aws configservice get-compliance-details-by-config-rule --config-rule-name "local-efs-access-point-enforce-root-directory"
+# aws configservice get-compliance-details-by-config-rule   --config-rule-name "local-efs-access-point-enforce-root-directory"   --query "EvaluationResults[*].{ID: EvaluationResultIdentifier.EvaluationResultQualifier.ResourceId, Status: ComplianceType}"
+
 # 2. Minimal Shared File System Resource
 resource "aws_efs_file_system" "test" {
   creation_token = "efs-config-rule-test"
