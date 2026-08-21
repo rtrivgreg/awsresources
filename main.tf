@@ -5,18 +5,17 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
-    } 
+    }
   }
 }
 
 provider "aws" {
-  region = "us-east-1" # Change to your preferred target region
+  region = "us-east-1"
 }
 
 # 2. Minimal Shared File System Resource
 resource "aws_efs_file_system" "test" {
   creation_token = "efs-config-rule-test"
-  
   tags = {
     Name = "efs-config-test-fs"
   }
@@ -45,5 +44,21 @@ resource "aws_efs_access_point" "compliant" {
 
   tags = {
     Name = "test-compliant-ap"
+  }
+}
+
+# 5. LOCAL AWS CONFIG RULE (Bypasses Organization Conformance Pack Delays)
+resource "aws_config_config_rule" "local_efs_test_rule" {
+  name        = "local-efs-access-point-enforce-root-directory"
+  description = "Local rule to test EFS Access Point compliance immediately."
+
+  source {
+    owner             = "AWS"
+    source_identifier = "EFS_ACCESS_POINT_ENFORCE_ROOT_DIRECTORY"
+  }
+
+  # Restricts evaluations strictly to EFS Access Points to reduce noise
+  scope {
+    compliance_resource_types = ["AWS::EFS::AccessPoint"]
   }
 }
