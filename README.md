@@ -52,6 +52,11 @@ aws efs describe-access-points --access-point-id fsap-02ef604c893428543 --query 
 # Check Compliant configuration parameters
 aws efs describe-access-points --access-point-id fsap-0d3ce11d0b4bf2590 --query "AccessPoints[*].RootDirectory.Path"
 
+------------------
+Local redux
+Force Instant Evaluation:Because this rule is owned entirely by your account, it will respond to your manual CLI triggers:
+
+
 
   
 
