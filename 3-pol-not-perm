@@ -1,0 +1,85 @@
+# Fetch current account metadata dynamically
+data "aws_caller_identity" "current" {}
+
+# Fetch the current active user/role identity to anchor a safe policy principal
+data "aws_iam_session_context" "current" {
+  arn = data.aws_caller_identity.current.arn
+}
+
+################################################################################
+# 1. COMPLIANT STACK (Restricted IAM Access Only)
+################################################################################
+
+resource "aws_s3_bucket" "compliant_permissive_bucket" {
+  bucket        = "compliant-permissive-test-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
+}
+
+# Explicitly disable public access blocks so the bucket policy controls evaluation
+resource "aws_s3_bucket_public_access_block" "compliant_pab" {
+  bucket                  = aws_s3_bucket.compliant_permissive_bucket.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "compliant_policy" {
+  depends_on = [aws_s3_bucket_public_access_block.compliant_pab]
+  bucket     = aws_s3_bucket.compliant_permissive_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowSpecificCallerOnly"
+        Effect    = "Allow"
+        Principal = {
+          AWS = data.aws_caller_identity.current.account_id
+        }
+        Action   = ["s3:GetObject", "s3:PutObject"]
+        Resource = "${aws_s3_bucket.compliant_permissive_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+
+################################################################################
+# 2. NON-COMPLIANT STACK (Wildcard Public Permission)
+################################################################################
+
+resource "aws_s3_bucket" "non_compliant_permissive_bucket" {
+  bucket        = "non-compliant-permissive-test-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
+}
+
+# Explicitly disable public access blocks to let the broad policy take effect
+resource "aws_s3_bucket_public_access_block" "non_compliant_pab" {
+  bucket                  = aws_s3_bucket.non_compliant_permissive_bucket.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "non_compliant_policy" {
+  depends_on = [aws_s3_bucket_public_access_block.non_compliant_pab]
+  bucket     = aws_s3_bucket.non_compliant_permissive_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicWildcardAccess"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource  = [
+          aws_s3_bucket.non_compliant_permissive_bucket.arn,
+          "${aws_s3_bucket.non_compliant_permissive_bucket.arn}/*"
+        ]
+      }
+    ]
+  })
+}
