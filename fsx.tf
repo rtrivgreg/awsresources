@@ -1,23 +1,57 @@
+terraform {
+  required_version = ">= 1.3.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
 
+provider "aws" {
+  region = "us-east-1"
+}
 
 # ---------------------------------------------------------
-# 1. Minimal FSx for OpenZFS File System
+# 1. Zero-Cost Test Network (VPC & Subnet)
+# ---------------------------------------------------------
+resource "aws_vpc" "compliance_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name = "fsx-compliance-vpc"
+  }
+}
+
+resource "aws_subnet" "compliance_subnet" {
+  vpc_id            = aws_vpc.compliance_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+
+  tags = {
+    Name = "fsx-compliance-subnet"
+  }
+}
+
+# ---------------------------------------------------------
+# 2. Minimal FSx for OpenZFS Resource
 # ---------------------------------------------------------
 resource "aws_fsx_openzfs_file_system" "compliance_test" {
-  # Minimum storage capacity for OpenZFS SSD (64 GiB)
   storage_capacity    = 64
   storage_type        = "SSD"
   throughput_capacity = 64
+  deployment_type     = "SINGLE_AZ_1"
 
-  deployment_type = "SINGLE_AZ_1"
-  subnet_ids      = [var.subnet_id]
+  # Uses the managed subnet directly (no variable prompt)
+  subnet_ids = [aws_subnet.compliance_subnet.id]
 
-  # RULE COMPLIANCE: fsx-openzfs-copy-tags-enabled
-  # Both copy flags must be true to satisfy the AWS Config rule
+  # Rule: fsx-openzfs-copy-tags-enabled
   copy_tags_to_backups = true
   copy_tags_to_volumes = true
 
-  # Disable internal FSx automated backups to avoid duplicate storage costs
+  # Disable internal snapshot retention to eliminate extra FSx costs
   automatic_backup_retention_days = 0
   skip_final_backup               = true
 
@@ -28,10 +62,8 @@ resource "aws_fsx_openzfs_file_system" "compliance_test" {
 }
 
 # ---------------------------------------------------------
-# 2. AWS Backup Plan (Satisfies fsx-resources-protected-by-backup-plan)
+# 3. AWS Backup Infrastructure
 # ---------------------------------------------------------
-
-# IAM Role for AWS Backup
 resource "aws_iam_role" "backup_role" {
   name = "fsx-openzfs-backup-compliance-role"
 
@@ -42,7 +74,7 @@ resource "aws_iam_role" "backup_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "://amazonaws.com"
+          Service = "backup.amazonaws.com"
         }
       }
     ]
@@ -54,12 +86,11 @@ resource "aws_iam_role_policy_attachment" "backup_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
 }
 
-# AWS Backup Vault
 resource "aws_backup_vault" "test_vault" {
   name = "fsx-test-backup-vault"
 }
 
-# AWS Backup Plan
+# Rule: fsx-resources-protected-by-backup-plan
 resource "aws_backup_plan" "test_plan" {
   name = "fsx-compliance-backup-plan"
 
@@ -69,12 +100,12 @@ resource "aws_backup_plan" "test_plan" {
     schedule          = "cron(0 12 * * ? *)"
 
     lifecycle {
-      delete_after = 1 # Minimal retention to minimize backup costs
+      delete_after = 1 # Minimize vault retention costs
     }
   }
 }
 
-# AWS Backup Selection targeting the OpenZFS File System ARN
+# Assigns the FSx OpenZFS file system to the AWS Backup Plan
 resource "aws_backup_selection" "fsx_selection" {
   iam_role_arn = aws_iam_role.backup_role.arn
   name         = "fsx-openzfs-selection"
@@ -83,18 +114,4 @@ resource "aws_backup_selection" "fsx_selection" {
   resources = [
     aws_fsx_openzfs_file_system.compliance_test.arn
   ]
-}
-
-# ---------------------------------------------------------
-# Variables
-# ---------------------------------------------------------
-variable "aws_region" {
-  type        = string
-  default     = "us-east-1"
-  description = "AWS region"
-}
-
-variable "subnet_id" {
-  type        = string
-  description = "The Subnet ID for the OpenZFS Single-AZ deployment"
 }
