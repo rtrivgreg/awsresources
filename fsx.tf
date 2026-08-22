@@ -113,6 +113,7 @@ resource "aws_backup_selection" "fsx_selection" {
 # 2. NON-COMPLIANT STACK (Fails All 4 Managed Rules)
 ################################################################################
 
+
 # Rule 1 Failure: OpenZFS with tag replication turned off
 resource "aws_fsx_openzfs_file_system" "non_compliant_zfs" {
   storage_capacity                = 64
@@ -132,6 +133,7 @@ resource "aws_fsx_ontap_file_system" "non_compliant_ontap" {
   subnet_ids          = [aws_subnet.subnet_a.id]
   throughput_capacity = 128
   security_group_ids  = [aws_security_group.fsx_sg.id]
+  preferred_subnet_id = aws_subnet.subnet_a.id
 
   # FAILS COMPLIANCE (Must be MULTI_AZ_1)
   deployment_type     = "SINGLE_AZ_1" 
