@@ -1,4 +1,3 @@
-
 # Fetch the current AWS Account ID dynamically to format Access Point resource names
 data "aws_caller_identity" "current" {}
 
@@ -62,7 +61,7 @@ resource "aws_vpc" "test_vpc" {
 
 # COMPLIANT: Directory bucket with active lifecycle rule configuration attached
 resource "aws_s3directory_bucket" "compliant" {
-  bucket        = "compliant-test-bucket--use1-az4--x-s3"
+  bucket          = "compliant-test-bucket--use1-az4--x-s3"
   data_redundancy = "SingleAZ"
   type            = "Directory"
 }
@@ -81,14 +80,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
   }
 }
 
-
-
 # NON-COMPLIANT: Directory bucket explicitly missing a lifecycle configuration
-resource "aws_s3_directory_bucket" "dir_non_compliant" {
-  bucket        = "dir-non-compliant--use1-az4--x-s3"
-  location {
-    name = "use1-az4"
-  }
+# FIX: Adjusted invalid provider name string type and stripped invalid syntax blocks
+resource "aws_s3directory_bucket" "dir_non_compliant" {
+  bucket          = "dir-non-compliant--use1-az4--x-s3"
+  data_redundancy = "SingleAZ"
+  type            = "Directory"
 }
 
 
@@ -211,7 +208,8 @@ resource "aws_s3_bucket" "restore_non_compliant" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "restore_non_compliant_config" {
-  bucket = aws_s3_bucket.your_non_compliant_bucket.id
+  # FIX: Corrected placeholder object resource string address reference
+  bucket = aws_s3_bucket.restore_non_compliant.id
 
   rule {
     id     = "restore-non-compliant-rule"
