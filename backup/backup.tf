@@ -48,7 +48,7 @@ resource "aws_backup_vault" "compliance_vault" {
 
 resource "aws_backup_vault_lock_configuration" "vault_lock" {
   backup_vault_name   = aws_backup_vault.compliance_vault.name
-  changeable_for_days = 0 # No cooling-off period; allows immediate adjustments
+  changeable_for_days = 3 # No cooling-off period; allows immediate adjustments
 
   # Governance mode protects against deletion by standard users, 
   # but allows IAM admin/Terraform destroy to wipe it cleanly.
