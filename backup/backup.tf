@@ -82,6 +82,7 @@ resource "aws_backup_plan" "compliance_plan" {
 resource "aws_iam_role" "backup_role" {
   name = "aws-backup-compliance-execution-role"
 
+  # FIX: Restructured clean JSON trust pattern targeting the AWS Backup service
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -89,12 +90,13 @@ resource "aws_iam_role" "backup_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "://amazonaws.com"
+          Service = "backup.amazonaws.com"
         }
       }
     ]
   })
 }
+
 
 resource "aws_iam_role_policy_attachment" "backup_policy" {
   role       = aws_iam_role.backup_role.name
