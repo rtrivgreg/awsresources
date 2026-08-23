@@ -69,7 +69,8 @@ resource "aws_s3_directory_bucket" "compliant" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
-  bucket = aws_s3_directory_bucket.compliant.id
+  # Change .id to .bucket to resolve the deprecation warning
+  bucket = aws_s3_directory_bucket.compliant.bucket
 
   rule {
     id     = "abort-incomplete-multipart"
