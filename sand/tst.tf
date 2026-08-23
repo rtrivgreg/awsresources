@@ -15,6 +15,14 @@
 #   - Zero-Cost Architecture: Set 'target_capacity = 0' to evaluate request definitions 
 #     via the AWS Control Plane API without launching live, billable EC2 compute instances.
 # =========================================================================================
+# Compliance
+# python3 rstats.py EC2_SPOT_FLEET_REQUEST_CT_ENCRYPTION_AT_REST us-east-1
+# aws configservice get-compliance-details-by-config-rule \
+#  --config-rule-name "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+#  --region us-east-1
+
+
+
 
 terraform {
   required_version = ">= 1.3.0"
@@ -130,16 +138,20 @@ resource "aws_launch_template" "non_compliant_template" {
 # 4. Spot Fleet Requests (ec2-spot-fleet-request-ct-encryption-at-rest)
 # ---------------------------------------------------------
 
-# COMPLIANT: Uses the compliant Launch Template with target_capacity = 0 to prevent billing
+# COMPLIANT Spot Fleet: Uses inline launch_specification with encrypted = true
 resource "aws_spot_fleet_request" "compliant_spot_fleet" {
   iam_fleet_role      = aws_iam_role.spot_fleet_role.arn
-  target_capacity     = 0 # Cost protection: prevents instance launch
+  target_capacity     = 0
   allocation_strategy = "lowestPrice"
 
-  launch_template_config {
-    launch_template_specification {
-      id      = aws_launch_template.compliant_template.id
-      version = aws_launch_template.compliant_template.latest_version
+  launch_specification {
+    image_id      = data.aws_ami.minimal_ami.id
+    instance_type = "t3.nano"
+
+    root_block_device {
+      volume_size = 1
+      volume_type = "gp3"
+      encrypted   = true
     }
   }
 
@@ -149,16 +161,20 @@ resource "aws_spot_fleet_request" "compliant_spot_fleet" {
   }
 }
 
-# NON-COMPLIANT: Uses the non-compliant Launch Template with target_capacity = 0 to prevent billing
+# NON-COMPLIANT Spot Fleet: Uses inline launch_specification with encrypted = false
 resource "aws_spot_fleet_request" "non_compliant_spot_fleet" {
   iam_fleet_role      = aws_iam_role.spot_fleet_role.arn
-  target_capacity     = 0 # Cost protection: prevents instance launch
+  target_capacity     = 0
   allocation_strategy = "lowestPrice"
 
-  launch_template_config {
-    launch_template_specification {
-      id      = aws_launch_template.non_compliant_template.id
-      version = aws_launch_template.non_compliant_template.latest_version
+  launch_specification {
+    image_id      = data.aws_ami.minimal_ami.id
+    instance_type = "t3.nano"
+
+    root_block_device {
+      volume_size = 1
+      volume_type = "gp3"
+      encrypted   = false
     }
   }
 
