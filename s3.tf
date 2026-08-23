@@ -61,23 +61,26 @@ resource "aws_vpc" "test_vpc" {
 # -----------------------------------------------------------------------------------------
 
 # COMPLIANT: Directory bucket with active lifecycle rule configuration attached
-resource "aws_s3_directory_bucket" "dir_compliant" {
-  bucket        = "dir-compliant--use1-az4--x-s3" # Must include valid AZ ID string suffix
-  location {
-    name = "use1-az4"
-  }
+resource "aws_s3directory_bucket" "compliant" {
+  bucket        = "compliant-test-bucket--use1-az4--x-s3"
+  data_redundancy = "SingleAZ"
+  type            = "Directory"
 }
 
 # CHANGE THIS RESOURCE TYPE on line 71
+resource "aws_s3directory_bucket" "compliant" {
+  bucket          = "compliant-lifecycle-test--use1-az4--x-s3"
+  data_redundancy = "SingleAZ"
+  type            = "Directory"
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
   bucket = aws_s3directory_bucket.compliant.id
 
   rule {
     id     = "abort-incomplete-multipart"
     status = "Enabled"
-    
-    # Must include an empty filter block to satisfy newer provider requirements
-    filter {} 
+    filter {}
 
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
@@ -185,23 +188,23 @@ resource "aws_s3_bucket_policy" "non_compliant_policy_attachment" {
 # -----------------------------------------------------------------------------------------
 
 # COMPLIANT: Stays on short recovery tiers (Transitions straight to STANDARD_IA)
-resource "aws_s3_bucket" "restore_compliant" {
-  bucket        = "cfg-compliance-restore-compliant-bucket"
+resource "aws_s3_bucket" "restore_target" {
+  bucket        = "restore-compliance-test-bucket"
   force_destroy = true
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "restore_compliant_config" {
-  bucket = aws_s3_bucket.your_bucket.id
+  bucket = aws_s3_bucket.restore_target.id
 
   rule {
-    id     = "your-rule-id"
+    id     = "restore-target-rule"
     status = "Enabled"
-
-    # ADD THIS LINE RIGHT HERE to fix the warning
     filter {}
 
-    expiration {
-      days = 30
+    # Example transition block to satisfy the rule requirements
+    transition {
+      days          = 30
+      storage_class = "GLACIER"
     }
   }
 }
@@ -214,14 +217,16 @@ resource "aws_s3_bucket" "restore_non_compliant" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "restore_non_compliant_config" {
-  bucket = aws_s3_bucket.restore_non_compliant.id
+  bucket = aws_s3_bucket.your_non_compliant_bucket.id
 
   rule {
-    id     = "glacier-deep-archive-transition"
+    id     = "restore-non-compliant-rule"
     status = "Enabled"
-    transition {
-      days          = 180
-      storage_class = "DEEP_ARCHIVE" # 12+ hour retrieval times fail rule requirements
+    filter {}
+
+    # Keep your existing lifecycle actions (e.g., expiration or transition) below
+    expiration {
+      days = 1
     }
   }
 }
