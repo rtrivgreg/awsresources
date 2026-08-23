@@ -15,20 +15,21 @@
 #   - Zero-Cost Architecture: Set 'target_capacity = 0' to evaluate request definitions 
 #     via the AWS Control Plane API without launching live, billable EC2 compute instances.
 # =========================================================================================
+/*
+Compliance
 
-terraform {
-  required_version = ">= 1.3.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
+ python3 rstats.py EC2_SPOT_FLEET_REQUEST_CT_ENCRYPTION_AT_REST us-east-1
+ aws configservice get-compliance-details-by-config-rule \
+  --config-rule-name "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+  --region us-east-1
+ aws configservice start-config-rules-evaluation \
+ --config-rule-names "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+  --region us-east-1
+ 60 secs
+ aws configservice get-compliance-details-by-config-rule \
+  --config-rule-name "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+  --region us-east-1
+*/
 
 variable "aws_region" {
   type        = string
@@ -65,11 +66,11 @@ resource "aws_iam_role" "spot_fleet_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "://amazonaws.com"
+          Service = "spotfleet.amazonaws.com"
         }
+        Action = "sts:AssumeRole"
       }
     ]
   })
@@ -130,16 +131,21 @@ resource "aws_launch_template" "non_compliant_template" {
 # 4. Spot Fleet Requests (ec2-spot-fleet-request-ct-encryption-at-rest)
 # ---------------------------------------------------------
 
-# COMPLIANT: Uses the compliant Launch Template with target_capacity = 0 to prevent billing
+# COMPLIANT Spot Fleet
 resource "aws_spot_fleet_request" "compliant_spot_fleet" {
   iam_fleet_role      = aws_iam_role.spot_fleet_role.arn
-  target_capacity     = 0 # Cost protection: prevents instance launch
+  target_capacity     = 0
   allocation_strategy = "lowestPrice"
 
-  launch_template_config {
-    launch_template_specification {
-      id      = aws_launch_template.compliant_template.id
-      version = aws_launch_template.compliant_template.latest_version
+  launch_specification {
+    # FIXED: Changed from image_id to ami
+    ami           = data.aws_ami.minimal_ami.id
+    instance_type = "t3.nano"
+
+    root_block_device {
+      volume_size = 1
+      volume_type = "gp3"
+      encrypted   = true
     }
   }
 
@@ -149,16 +155,21 @@ resource "aws_spot_fleet_request" "compliant_spot_fleet" {
   }
 }
 
-# NON-COMPLIANT: Uses the non-compliant Launch Template with target_capacity = 0 to prevent billing
+# NON-COMPLIANT Spot Fleet
 resource "aws_spot_fleet_request" "non_compliant_spot_fleet" {
   iam_fleet_role      = aws_iam_role.spot_fleet_role.arn
-  target_capacity     = 0 # Cost protection: prevents instance launch
+  target_capacity     = 0
   allocation_strategy = "lowestPrice"
 
-  launch_template_config {
-    launch_template_specification {
-      id      = aws_launch_template.non_compliant_template.id
-      version = aws_launch_template.non_compliant_template.latest_version
+  launch_specification {
+    # FIXED: Changed from image_id to ami
+    ami           = data.aws_ami.minimal_ami.id
+    instance_type = "t3.nano"
+
+    root_block_device {
+      volume_size = 1
+      volume_type = "gp3"
+      encrypted   = false
     }
   }
 
@@ -167,4 +178,3 @@ resource "aws_spot_fleet_request" "non_compliant_spot_fleet" {
     Environment = "Testing"
   }
 }
-
