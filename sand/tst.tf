@@ -138,14 +138,15 @@ resource "aws_launch_template" "non_compliant_template" {
 # 4. Spot Fleet Requests (ec2-spot-fleet-request-ct-encryption-at-rest)
 # ---------------------------------------------------------
 
-# COMPLIANT Spot Fleet: Uses inline launch_specification with encrypted = true
+# COMPLIANT Spot Fleet
 resource "aws_spot_fleet_request" "compliant_spot_fleet" {
   iam_fleet_role      = aws_iam_role.spot_fleet_role.arn
   target_capacity     = 0
   allocation_strategy = "lowestPrice"
 
   launch_specification {
-    image_id      = data.aws_ami.minimal_ami.id
+    # FIXED: Changed from image_id to ami
+    ami           = data.aws_ami.minimal_ami.id
     instance_type = "t3.nano"
 
     root_block_device {
@@ -161,14 +162,15 @@ resource "aws_spot_fleet_request" "compliant_spot_fleet" {
   }
 }
 
-# NON-COMPLIANT Spot Fleet: Uses inline launch_specification with encrypted = false
+# NON-COMPLIANT Spot Fleet
 resource "aws_spot_fleet_request" "non_compliant_spot_fleet" {
   iam_fleet_role      = aws_iam_role.spot_fleet_role.arn
   target_capacity     = 0
   allocation_strategy = "lowestPrice"
 
   launch_specification {
-    image_id      = data.aws_ami.minimal_ami.id
+    # FIXED: Changed from image_id to ami
+    ami           = data.aws_ami.minimal_ami.id
     instance_type = "t3.nano"
 
     root_block_device {
