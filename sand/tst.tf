@@ -65,11 +65,11 @@ resource "aws_iam_role" "spot_fleet_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "://amazonaws.com"
+          Service = "spotfleet.amazonaws.com"
         }
+        Action = "sts:AssumeRole"
       }
     ]
   })
