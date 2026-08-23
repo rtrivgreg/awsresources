@@ -1,3 +1,28 @@
+# =========================================================================================
+# COMPLIANCE TESTING GUIDE: fsx-openzfs-copy-tags-enabled
+# =========================================================================================
+# • Rule Objective:
+#   - Assesses whether FSx for OpenZFS file systems copy tags to backups and child volumes.
+#
+# • Testing COMPLIANCE (Pass Scenario):
+#   - Set both:
+#       copy_tags_to_backups = true
+#       copy_tags_to_volumes = true
+#   - Deploy via 'terraform apply'.
+#   - AWS Config marks the resource COMPLIANT (~1-2 mins post-deploy).
+#
+# • Testing NON-COMPLIANCE (Fail Scenario):
+#   - Set either/both:
+#       copy_tags_to_backups = false
+#       copy_tags_to_volumes = false
+#   - Deploy via 'terraform apply'.
+#   - AWS Config marks the resource NON_COMPLIANT upon evaluating configuration change.
+#
+# • Fast Verification:
+#   - Force immediate evaluation via AWS CLI:
+#       aws configservice start-config-rules-evaluation \
+#         --config-rule-names fsx-openzfs-copy-tags-enabled
+# =========================================================================================
 
 # ---------------------------------------------------------
 # 1. Zero-Cost Test Network (VPC & Subnet)
