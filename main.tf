@@ -1,6 +1,4 @@
- # Inside A/main.tf
-module "S3" {
-  source = "./S3"
+
 
 # 1. AWS Provider Configuration
 terraform {
@@ -16,4 +14,8 @@ terraform {
 provider "aws" {
   region = "us-east-1"
 }
+
+ # Inside A/main.tf
+module "s3" {
+  source = "./s3"
 
