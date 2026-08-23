@@ -68,17 +68,23 @@ resource "aws_s3_directory_bucket" "dir_compliant" {
   }
 }
 
-resource "aws_s3_directory_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
-  bucket = aws_s3_directory_bucket.dir_compliant.id
+# CHANGE THIS RESOURCE TYPE on line 71
+resource "aws_s3_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
+  bucket = aws_s3directory_bucket.compliant.id
 
   rule {
-    id     = "expire-temp-objects"
+    id     = "abort-incomplete-multipart"
     status = "Enabled"
-    expiration {
-      days = 1
+    
+    # Must include an empty filter block to satisfy newer provider requirements
+    filter {} 
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 }
+
 
 # NON-COMPLIANT: Directory bucket explicitly missing a lifecycle configuration
 resource "aws_s3_directory_bucket" "dir_non_compliant" {
@@ -185,17 +191,21 @@ resource "aws_s3_bucket" "restore_compliant" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "restore_compliant_config" {
-  bucket = aws_s3_bucket.restore_compliant.id
+  bucket = aws_s3_bucket.your_bucket.id
 
   rule {
-    id     = "infrequent-access-transition"
+    id     = "your-rule-id"
     status = "Enabled"
-    transition {
-      days          = 30
-      storage_class = "STANDARD_IA" # Low latency tier; satisfies quick restore targets
+
+    # ADD THIS LINE RIGHT HERE to fix the warning
+    filter {}
+
+    expiration {
+      days = 30
     }
   }
 }
+
 
 # NON-COMPLIANT: Automatically archives to slow cold tiers (Glacier Deep Archive)
 resource "aws_s3_bucket" "restore_non_compliant" {
