@@ -1,3 +1,16 @@
+# =========================================================================================
+# AWS CONFIG COMPLIANCE MATRIX (Backup)
+# =========================================================================================
+# • backup-recovery-point-encrypted: Enforced via dedicated KMS Customer Managed Key 
+#   assigned directly to the AWS Backup Vault configuration block.
+# • backup-plan-min-frequency-and-min-retention-check: Satisfied by pairing a structured 
+#   cron cron(0 12 * * ? *) schedule with an explicit lifecycle deletion configuration.
+# • backup-recovery-point-minimum-retention-check: Maintained via a 1-day retention 
+#   lifecycle window block, preventing undefined lifespans on generated snapshots.
+# • backup-recovery-point-manual-deletion-disabled: Met using Vault Lock in Governance 
+#   mode to block unauthorized drops while preserving safe Terraform destroy paths.
+# =========================================================================================
+
 # ---------------------------------------------------------
 # 1. Mock Target Resource (Smallest 1 GiB EBS Volume)
 # ---------------------------------------------------------
