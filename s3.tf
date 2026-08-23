@@ -67,13 +67,6 @@ resource "aws_s3directory_bucket" "compliant" {
   type            = "Directory"
 }
 
-# CHANGE THIS RESOURCE TYPE on line 71
-resource "aws_s3directory_bucket" "compliant" {
-  bucket          = "compliant-lifecycle-test--use1-az4--x-s3"
-  data_redundancy = "SingleAZ"
-  type            = "Directory"
-}
-
 resource "aws_s3_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
   bucket = aws_s3directory_bucket.compliant.id
 
@@ -87,6 +80,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "dir_compliant_lifecycle" {
     }
   }
 }
+
 
 
 # NON-COMPLIANT: Directory bucket explicitly missing a lifecycle configuration
