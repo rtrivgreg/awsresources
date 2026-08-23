@@ -4,12 +4,12 @@
 #module "backup" {
 #  source = "./backup"
 #}
-module "ec2" {
-  source = "./ec2"
-}
-#module "efs" {
-#  source = "./efs"
+#module "ec2" {
+#  source = "./ec2"
 #}
+module "efs" {
+  source = "./efs"
+}
 #module "fsx" {
 #  source = "./fsx"
 #}
