@@ -1,3 +1,7 @@
+ # Inside A/main.tf
+module "S3" {
+  source = "./S3"
+
 # 1. AWS Provider Configuration
 terraform {
   required_version = ">= 1.0.0"
