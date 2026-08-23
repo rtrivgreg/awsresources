@@ -1,3 +1,21 @@
+/*
+Compliance
+s3-meets-restore-time-target
+ python3 rstats.py EC2_SPOT_FLEET_REQUEST_CT_ENCRYPTION_AT_REST us-east-1
+ aws configservice get-compliance-details-by-config-rule \
+  --config-rule-name "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+  --region us-east-1
+ aws configservice start-config-rules-evaluation \
+ --config-rule-names "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+  --region us-east-1
+ 60 secs
+ aws configservice get-compliance-details-by-config-rule \
+  --config-rule-name "ec2-spot-fleet-request-ct-encryption-at-rest-conformance-pack-a0ij4dw3c" \
+  --region us-east-1
+*/
+
+
+
 # Fetch the current AWS Account ID dynamically to format Access Point resource names
 data "aws_caller_identity" "current" {}
 
