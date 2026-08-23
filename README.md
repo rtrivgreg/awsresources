@@ -1,3 +1,8 @@
+8/23/
+Terraform Agentics:
+
+"Generate the smallest, most cost-effective AWS Backup infrastructure in Terraform to test compliance for the following AWS Config rules: backup-recovery-point-encrypted, backup-plan-min-frequency-and-min-retention-check, backup-recovery-point-minimum-retention-check, and backup-recovery-point-manual-deletion-disabled.Include the following parameters:A minimal Backup Vault utilizing AWS Backup Vault Lock configured strictly in Governance mode (to allow terraform destroy).A Backup Plan using a standard cron schedule, configured for a mock 1-day backup retention period to minimize costs.A minimal mock target resource (such as a small, unattached 1 GiB EBS volume) and its corresponding Backup Selection so actual recovery points can be generated for evaluation.Do not generate any AWS Config rule testing resources, just the core backup infrastructure."
+
 #rstats.py dump forensics from SID
 
 
