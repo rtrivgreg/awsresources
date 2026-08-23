@@ -161,15 +161,29 @@ resource "aws_s3_bucket" "policy_non_compliant" {
   force_destroy = true
 }
 
+# NEW BLOCK: Explicitly disable public access blocks on this bucket so the wildcard policy can apply
+resource "aws_s3_bucket_public_access_block" "policy_non_compliant_pab" {
+  bucket = aws_s3_bucket.policy_non_compliant.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
 resource "aws_s3_bucket_policy" "non_compliant_policy_attachment" {
   bucket = aws_s3_bucket.policy_non_compliant.id
+  
+  # NEW LINE: Force the policy to wait until the public access block is disabled
+  depends_on = [aws_s3_bucket_public_access_block.policy_non_compliant_pab]
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Sid       = "PermissiveWildcardPrincipal"
         Effect    = "Allow"
-        Principal = "*" # Wildcard triggers s3-bucket-policy-not-more-permissive flag
+        Principal = "*" 
         Action    = "s3:GetObject"
         Resource  = "${aws_s3_bucket.policy_non_compliant.arn}/*"
       }
