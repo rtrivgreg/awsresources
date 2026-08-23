@@ -177,7 +177,6 @@ resource "aws_s3_bucket_policy" "non_compliant_policy_attachment" {
 # -----------------------------------------------------------------------------------------
 # 4. RESTORE TIME TARGET (s3-meets-restore-time-target)
 # -----------------------------------------------------------------------------------------
-data "aws_caller_identity" "current" {}
 
 # COMPLIANT: Stays on short recovery tiers (Transitions straight to STANDARD_IA)
 resource "aws_s3_bucket" "restore_compliant" {
