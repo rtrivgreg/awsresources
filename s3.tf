@@ -97,9 +97,11 @@ resource "aws_s3_directory_bucket" "dir_non_compliant" {
 # 2. S3 ACCESS POINTS (s3-access-point-in-vpc-only & s3-access-point-public-access-blocks)
 # -----------------------------------------------------------------------------------------
 resource "aws_s3_bucket" "ap_standard_bucket" {
-  bucket        = "cfg-compliance-access-point-testing-bucket"
+  # ADDED: Dynamic account ID suffix to prevent global naming collisions
+  bucket        = "cfg-compliance-access-point-testing-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
 }
+
 
 # COMPLIANT AP: Enforces VPC-Only routing and explicitly enables Public Access Blocks
 resource "aws_s3_access_point" "ap_compliant" {
