@@ -1,52 +1,200 @@
-# aws configservice get-compliance-details-by-config-rule --config-rule-name "local-efs-access-point-enforce-root-directory"
-# aws configservice get-compliance-details-by-config-rule   --config-rule-name "local-efs-access-point-enforce-root-directory"   --query "EvaluationResults[*].{ID: EvaluationResultIdentifier.EvaluationResultQualifier.ResourceId, Status: ComplianceType}"
+# ==============================================================================
+# 1. NETWORK INITIALIZATION (Minimal Footprint for Mount Targets)
+# ==============================================================================
 
-# 2. Minimal Shared File System Resource
-resource "aws_efs_file_system" "test" {
-  creation_token = "efs-config-rule-test"
-  tags = {
-    Name = "efs-config-test-fs"
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  tags                 = { Name = "efs-config-test-vpc" }
+}
+
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+  tags                 = { Name = "efs-compliant-private-subnet" }
+}
+
+# Public subnet designed to trigger the "efs-mount-target-public-accessible" rule
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-1a"
+  map_public_ip_on_launch = true 
+  tags                    = { Name = "efs-noncompliant-public-subnet" }
+}
+
+# Internet Gateway to satisfy the subnet logic requirement for internet-route evaluations
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
   }
 }
 
-# 3. NON-COMPLIANT: Points to the root "/" directory
-resource "aws_efs_access_point" "non_compliant" {
-  file_system_id = aws_efs_file_system.test.id
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public_rt.id
+}
 
+resource "aws_security_group" "efs_sg" {
+  name        = "efs-test-sg"
+  description = "Minimal EFS rules"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+}
+
+# ==============================================================================
+# 2. AWS BACKUP ARCHITECTURE
+# ==============================================================================
+
+resource "aws_backup_vault" "test_vault" {
+  name        = "efs_config_test_vault"
+  kms_key_arn = "arn:aws:kms:us-east-1:111222333444:alias/aws/backup" # Fallback placeholder or standard alias
+}
+
+resource "aws_backup_plan" "compliant_plan" {
+  name = "efs_compliant_backup_plan"
+
+  rule {
+    rule_name         = "daily_backup_rule"
+    target_vault_name = aws_backup_vault.test_vault.name
+    schedule          = "cron(0 12 * * ? *)"
+    
+    lifecycle {
+      delete_after = 35
+    }
+  }
+}
+
+resource "aws_iam_role" "backup_role" {
+  name = "efs-backup-test-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "://amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "backup_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackupAndRestore"
+  role       = aws_iam_role.backup_role.name
+}
+
+# Compliant Backup Assignment (Protects COMPLIANT filesystem)
+resource "aws_backup_selection" "compliant_selection" {
+  iam_role_arn = aws_iam_role.backup_role.arn
+  name         = "compliant_efs_selection"
+  plan_id      = aws_backup_plan.compliant_plan.id
+
+  resources = [
+    aws_efs_file_system.compliant.arn
+  ]
+}
+
+# ==============================================================================
+# 3. COMPLIANT FILESYSTEM RESOURCES
+# ==============================================================================
+
+resource "aws_efs_file_system" "compliant" {
+  creation_token   = "efs-compliant-token"
+  encrypted        = true # Satisfies: efs-filesystem-ct-encrypted & efs-encrypted-check
+  performance_mode = "generalPurpose"
+  throughput_mode  = "bursting"
+
+  tags = {
+    Name = "efs-compliant-resource"
+    # Satisfies: efs-automatic-backups-enabled (AWS managed backup policy tag standard if applicable)
+    "aws:elasticfilesystem:backup-policy" = "dummy-enabled" 
+  }
+}
+
+resource "aws_efs_backup_policy" "compliant_policy" {
+  file_system_id = aws_efs_file_system.compliant.id
+  backup_policy {
+    status = "ENABLED" # Satisfies: efs-automatic-backups-enabled
+  }
+}
+
+resource "aws_efs_mount_target" "compliant_target" {
+  file_system_id  = aws_efs_file_system.compliant.id
+  subnet_id       = aws_subnet.private.id # Satisfies: efs-mount-target-public-accessible
+  security_groups = [aws_security_group.efs_sg.id]
+}
+
+resource "aws_efs_access_point" "compliant_ap" {
+  file_system_id = aws_efs_file_system.compliant.id
+
+  # Satisfies: efs-access-point-enforce-root-directory
+  root_directory {
+    path = "/custom-root" 
+    creation_info {
+      owner_gid   = 1001
+      owner_uid   = 1001
+      permissions = "0755"
+    }
+  }
+
+  # Satisfies: efs-access-point-enforce-user-identity
+  posix_user {
+    uid = 1001
+    gid = 1001
+  }
+}
+
+# ==============================================================================
+# 4. NON-COMPLIANT FILESYSTEM RESOURCES
+# ==============================================================================
+
+resource "aws_efs_file_system" "non_compliant" {
+  creation_token   = "efs-non-compliant-token"
+  encrypted        = false # Triggers Violation: efs-filesystem-ct-encrypted & efs-encrypted-check
+  performance_mode = "generalPurpose"
+  throughput_mode  = "bursting"
+
+  tags = {
+    Name = "efs-non-compliant-resource"
+  }
+}
+
+resource "aws_efs_backup_policy" "non_compliant_policy" {
+  file_system_id = aws_efs_file_system.non_compliant.id
+  backup_policy {
+    status = "DISABLED" # Triggers Violation: efs-automatic-backups-enabled
+  }
+}
+
+# Left intentionally out of aws_backup_selection to trigger:
+# efs-in-backup-plan & efs-resources-protected-by-backup-plan
+
+resource "aws_efs_mount_target" "non_compliant_target" {
+  file_system_id  = aws_efs_file_system.non_compliant.id
+  subnet_id       = aws_subnet.public.id # Triggers Violation: efs-mount-target-public-accessible
+  security_groups = [aws_security_group.efs_sg.id]
+}
+
+resource "aws_efs_access_point" "non_compliant_ap" {
+  file_system_id = aws_efs_file_system.non_compliant.id
+
+  # Triggers Violation: efs-access-point-enforce-root-directory (Exposes root path directly)
   root_directory {
     path = "/"
   }
 
-  tags = {
-    Name = "test-non-compliant-ap"
-  }
-}
-
-# 4. COMPLIANT: Points to a specific subfolder
-resource "aws_efs_access_point" "compliant" {
-  file_system_id = aws_efs_file_system.test.id
-
-  root_directory {
-    path = "/custom-sub-directory"
-  }
-
-  tags = {
-    Name = "test-compliant-ap"
-  }
-}
-
-# 5. LOCAL AWS CONFIG RULE (Bypasses Organization Conformance Pack Delays)
-resource "aws_config_config_rule" "local_efs_test_rule" {
-  name        = "local-efs-access-point-enforce-root-directory"
-  description = "Local rule to test EFS Access Point compliance immediately."
-
-  source {
-    owner             = "AWS"
-    source_identifier = "EFS_ACCESS_POINT_ENFORCE_ROOT_DIRECTORY"
-  }
-
-  # Restricts evaluations strictly to EFS Access Points to reduce noise
-  scope {
-    compliance_resource_types = ["AWS::EFS::AccessPoint"]
-  }
+  # Triggers Violation: efs-access-point-enforce-user-identity (Lacks posix_user identity enforce block)
 }
