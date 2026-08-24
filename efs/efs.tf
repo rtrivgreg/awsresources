@@ -85,7 +85,10 @@ aws configservice describe-conformance-pack-compliance-details \
     }" \
     --output table
 
-
+How to Interpret the Output from Step 3Because your Terraform code deployed side-by-side COMPLIANT and NON_COMPLIANT asset pairs to test your rules, your Step 3 table output should look like a
+balanced grid:You should see aws-compliant-resource showing up as COMPLIANT.You should see aws-non-compliant-resource showing up as NON_COMPLIANT.If both show up as compliant, it indicates that either 
+the AWS Config evaluation cache has not fully updated yet, or a custom input parameter is missing from the pack definition.Did the Step 3 compliance table successfully display both your compliant and 
+non-compliant EFS resource IDs? Let me know if you run into any throttling errors when forcing the refresh.
 */
 
 resource "aws_vpc" "main" {
