@@ -13,6 +13,81 @@
 #            to validate absolute rule evaluation logic at zero minimal cost.
 # ==============================================================================
 
+/*
+cli test
+
+#!/bin/bash
+
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
+# Change this to the exact name of your deployed Conformance Pack
+PACK_NAME="efs-security-conformance-pack"
+
+echo "=============================================================================="
+echo " STEP 1: REFRESHING COMPLIANCE ENGINE FOR CONFORMANCE PACK: $PACK_NAME"
+echo "=============================================================================="
+
+echo "--> Discovering system-generated rule names inside the pack..."
+RULE_NAMES=$(aws configservice describe-config-rules \
+    --query "ConfigRules[?contains(ConfigRuleName, '$PACK_NAME')].ConfigRuleName" \
+    --output text)
+
+if [ -z "$RULE_NAMES" ]; then
+    echo "Error: No rules found matching Conformance Pack name '$PACK_NAME'."
+    exit 1
+fi
+
+echo "--> Triggering evaluation refresh for the following rules:"
+echo "$RULE_NAMES" | tr ' ' '\n'
+echo ""
+
+# Execute the asynchronous evaluation refresh
+aws configservice start-config-rules-evaluation --config-rule-names $RULE_NAMES
+
+echo "--> Refresh signal sent successfully. (Evaluations run asynchronously in the background)."
+echo "--> Waiting 10 seconds for initial processing before pulling diagnostics..."
+sleep 10
+
+
+echo "=============================================================================="
+echo " STEP 2: DIAGNOSTICS & LOGICAL EVALUATION PROBLEMS"
+echo "=============================================================================="
+echo "Checking if any rules failed to execute (e.g., IAM permission errors or timeouts)..."
+echo ""
+
+aws configservice describe-config-rules \
+    --config-rule-names $RULE_NAMES \
+    --query "ConfigRules[?[ConfigRuleState!='ACTIVE'] || [LastErrorMessage!=null]].{
+        RuleName: ConfigRuleName,
+        State: ConfigRuleState,
+        FailureReason: LastErrorMessage
+    }" \
+    --output table
+
+echo "Note: If the table above is empty, all rules executed successfully without system errors."
+echo ""
+
+
+echo "=============================================================================="
+echo " STEP 3: DETAILED RESOURCE COMPLIANCE STATES"
+echo "=============================================================================="
+echo "Listing evaluated resources and their compliance status (COMPLIANT / NON_COMPLIANT)..."
+echo ""
+
+# Formats output into a clean table showing Resource Type, ID, and Compliance State
+aws configservice describe-conformance-pack-compliance-details \
+    --conformance-pack-name "$PACK_NAME" \
+    --query "ConformancePackRuleEvaluationResults[].EvaluationResultIdentifier.EvaluationResultQualifier.{
+        ResourceType: ResourceType,
+        ResourceID: ResourceId,
+        Compliance: ComplianceType
+    }" \
+    --output table
+
+
+*/
+
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
