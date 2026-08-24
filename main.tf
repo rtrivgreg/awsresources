@@ -1,15 +1,15 @@
 # Y62 Infrastructure for storage compliance
 
 # Divided by category purely for organization. Each category can have a mixture of CRs.
-#module "backup" {
-#  source = "./backup"
-#}
-#module "ec2" {
-#  source = "./ec2"
-#}
-#module "efs" {
-#  source = "./efs"
-#}
+module "backup" {
+  source = "./backup"
+}
+module "ec2" {
+  source = "./ec2"
+}
+module "efs" {
+  source = "./efs"
+}
 module "fsx" {
   source = "./fsx"
 }
