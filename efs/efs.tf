@@ -1,5 +1,16 @@
 # ==============================================================================
-# 1. NETWORK INITIALIZATION (Minimal Footprint for Mount Targets)
+# AWS CONFIG COMPLIANCE TEST BED: AMAZON EFS & AWS BACKUP
+#
+# Target AWS Config Rule Coverage:
+# - DISASTER RECOVERY: efs-in-backup-plan, efs-resources-protected-by-backup-plan,
+#                      efs-automatic-backups-enabled
+# - ENCRYPTION:        efs-filesystem-ct-encrypted, efs-encrypted-check
+# - NETWORK SECURITY:  efs-mount-target-public-accessible
+# - ACCESS CONTROL:    efs-access-point-enforce-root-directory, 
+#                      efs-access-point-enforce-user-identity
+#
+# Structure: Deploys side-by-side COMPLIANT and NON_COMPLIANT resource pairs 
+#            to validate absolute rule evaluation logic at zero minimal cost.
 # ==============================================================================
 
 resource "aws_vpc" "main" {
