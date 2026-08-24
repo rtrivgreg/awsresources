@@ -15,61 +15,11 @@ generate the smallest, least expensive AWS backup-Recovery resource in terraform
 
 Generate the smallest, most cost-effective S3 Standard and S3 Express Directory Bucket infrastructure in Terraform to test compliance and non-compliance pairs for the following AWS Config rules:s3express-dir-bucket-lifecycle-rules-check (Directory Bucket pair)s3-access-point-in-vpc-only & s3-access-point-public-access-blocks (Standard Bucket + Access Point pairs)s3-bucket-policy-not-more-permissive (Standard Bucket + Bucket Policy pairs)s3-meets-restore-time-target (Standard Bucket configuration)For each rule, include one compliant resource block and one non-compliant resource block. Keep all configurations empty of data to eliminate ingestion and storage costs. Do not generate the AWS Config rules themselves, only the target infrastructure.
 
-#rstats.py dump forensics from SID
 
+EFS 
+critique this request "generate the smallest, least expensive AWS backup-Recovery resource in terraform that will be used to test compliance and non-compliance for the following AWS Config rules: efs-in-backup-plan, efs-filesystem-ct-encrypted, efs-access-point-enforce-root-directory, efs-mount-target-public-accessible, efs-resources-protected-by-backup-plan, efs-automatic-backups-enabled, efs-access-point-enforce-user-identity ans efs-encrypted-check. Do not generate any tests, just the infrastructure that will satisfy this requirement"
 
-efs-access-point-enforce-root-directory
-
-fsx-windows-deployment-type-check
-backup-recovery-point-encrypted
-fsx-lustre-copy-tags-to-backups
-
-
-
-Your terminal output proves you are logged into a Member Account (or an account that has not been designated as the delegated administrator for AWS Config).
-aws configservice describe-config-rules \
-  --query "ConfigRules[?contains(ConfigRuleName, 'efs')].ConfigRuleName"
-  [
-    "efs-access-point-enforce-root-directory-conformance-pack-hbmlt5imw",
-    "efs-access-point-enforce-user-identity-conformance-pack-hbmlt5imw",
-    "efs-automatic-backups-enabled-conformance-pack-hbmlt5imw",
-    "efs-encrypted-check-conformance-pack-hbmlt5imw",
-    "efs-filesystem-ct-encrypted-conformance-pack-hbmlt5imw",
-    "efs-in-backup-plan-conformance-pack-hbmlt5imw",
-    "efs-mount-target-public-accessible-conformance-pack-hbmlt5imw",
-    "efs-resources-protected-by-backup-plan-conformance-pack-hbmlt5imw"
-]
-
-
-aws configservice start-config-rules-evaluation --config-rule-names "efs-access-point-enforce-root-directory-conformance-pack-hbmlt5imw"
-
-ubuntu@ip-10-0-1-190:~/repos/awsresources$ aws configservice start-config-rules-evaluation --config-rule-names "efs-access-point-enforce-root-directory-conformance-pack-hbmlt5imw"
-ubuntu@ip-10-0-1-190:~/repos/awsresources$ aws configservice get-compliance-details-by-resource \
-  --resource-type AWS::EFS::AccessPoint \
-  --resource-id fsap-02ef604c893428543
-{
-    "EvaluationResults": []
-}
-ubuntu@ip-10-0-1-190:~/repos/awsresources$ aws configservice get-compliance-details-by-resource \
-  --resource-type AWS::EFS::AccessPoint \
-  --resource-id fsap-0d3ce11d0b4bf2590
-{
-    "EvaluationResults": []
-}
-
-1. Trigger an Account-Wide Discovery ScanInstead of calling the rule, tell the local recorder to immediately analyze all untracked infrastructure changes in your account:bash
-
-aws configservice start-configuration-recorder --configuration-recorder-name default
-
-# Check Non-Compliant configuration parameters
-aws efs describe-access-points --access-point-id fsap-02ef604c893428543 --query "AccessPoints[*].RootDirectory.Path"
-
-# Check Compliant configuration parameters
-aws efs describe-access-points --access-point-id fsap-0d3ce11d0b4bf2590 --query "AccessPoints[*].RootDirectory.Path"
-
-------------------
-Local redux
-Force Instant Evaluation:Because this rule is owned entirely by your account, it will respond to your manual CLI triggers:
+Generate the minimal, lowest-cost Amazon EFS and AWS Backup infrastructure in Terraform to test AWS Config rules.For each of the following rules, create two versions of the resource—one that is COMPLIANT and one that is NON_COMPLIANT:efs-in-backup-planefs-filesystem-ct-encryptedefs-access-point-enforce-root-directoryefs-mount-target-public-accessibleefs-resources-protected-by-backup-planefs-automatic-backups-enabledefs-access-point-enforce-user-identityefs-encrypted-checkDo not generate any testing code, assertions, or deployment scripts. Provide only valid Terraform code containing the EFS filesystems, access points, mount targets, networks, backup plans, and backup selections required to trigger these distinct states.
 
 
 
